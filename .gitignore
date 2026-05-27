@@ -1,0 +1,24 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit
+.streamlit/
+
+# Output and temp files
+frames/
+video/
+downloads/
+output.pptx
+converted_presentation.pptx
+*.mp4
+*.m4a
+*.webm
