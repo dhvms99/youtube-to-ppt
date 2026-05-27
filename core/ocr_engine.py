@@ -26,9 +26,12 @@ def extract_text_from_image(image_path: str, crop_bottom_percent: float = 8.0) -
     crop_h = int(h * (1.0 - (crop_bottom_percent / 100.0)))
     cropped_img = img[:crop_h, :]
     
-    # readtext can accept a numpy array
-    results = reader.readtext(cropped_img)
+    # Resize the image to 2x for better punctuation (¿, ¡) recognition
+    enlarged_img = cv2.resize(cropped_img, (w * 2, crop_h * 2), interpolation=cv2.INTER_CUBIC)
     
-    # We join all extracted text lines into a single string with newlines
-    extracted_text = "\n".join([text for (bbox, text, prob) in results])
+    # readtext can accept a numpy array
+    results = reader.readtext(enlarged_img)
+    
+    # We join all extracted text lines into a single string with spaces instead of newlines
+    extracted_text = " ".join([text for (bbox, text, prob) in results])
     return extracted_text

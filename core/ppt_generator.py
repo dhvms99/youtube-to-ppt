@@ -13,6 +13,8 @@ def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx"):
     
     # Use a blank slide layout
     blank_slide_layout = prs.slide_layouts[6] 
+    
+    slide_count = 0
 
     for text in texts:
         # Skip empty texts
@@ -42,7 +44,14 @@ def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx"):
         # Apply requested font and size
         p.font.name = 'Pretendard Light'
         p.font.size = Pt(66)
-        p.font.color.rgb = RGBColor(0, 0, 0) # Black text
+        
+        # Alternate colors: Even slides = Black (#000000), Odd slides = Blue (#0070C0)
+        if slide_count % 2 == 0:
+            p.font.color.rgb = RGBColor(0, 0, 0)
+        else:
+            p.font.color.rgb = RGBColor(0, 112, 192)
+            
+        slide_count += 1
         
     prs.save(output_path)
     return output_path
