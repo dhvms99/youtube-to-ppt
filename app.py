@@ -87,46 +87,60 @@ elif service_mode == "📄 PDF 반반 번역기":
     st.write("PDF의 왼쪽 50% 텍스트를 한국어로 번역하여, 원문(우측)과 나란히 워드(.docx) 파일로 만들어줍니다.")
     st.write("*(참고: 하단 4.6%의 광고/꼬리말 영역은 자동으로 제외됩니다.)*")
     
+    st.sidebar.write("---")
+    st.sidebar.subheader("🔑 API 설정 (API Settings)")
+    openai_api_key = st.sidebar.text_input(
+        "OpenAI API Key", 
+        type="password", 
+        placeholder="sk-...", 
+        help="OpenAI API 키를 입력해 주세요. (시스템 환경 변수 'OPENAI_API_KEY'가 설정되어 있다면 비워두셔도 됩니다.)"
+    )
+    
     uploaded_pdf = st.file_uploader("Upload your PDF file:", type=["pdf"])
     
     if st.button("Translate & Convert to Word"):
         if not uploaded_pdf:
             st.warning("Please upload a PDF file first.")
         else:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                try:
-                    pdf_path = os.path.join(tmpdir, "uploaded.pdf")
-                    with open(pdf_path, "wb") as f:
-                        f.write(uploaded_pdf.getbuffer())
-                        
-                    with st.spinner("Extracting text from PDF (ignoring right half and bottom 4.6%)..."):
-                        pages_data = extract_half_texts_from_pdf(pdf_path)
-                    st.success(f"✅ Extracted text from {len(pages_data)} pages.")
-                    
-                    with st.spinner("Translating left-side text to Korean..."):
-                        translated_pages = []
-                        my_bar = st.progress(0, text="Translating pages...")
-                        total_pages = len(pages_data)
-                        
-                        for i, (left_text, right_text) in enumerate(pages_data):
-                            translated_left = translate_text(left_text) if left_text else ""
-                            translated_pages.append((translated_left, right_text))
-                            my_bar.progress((i + 1) / total_pages, text=f"Translating pages... ({i+1}/{total_pages})")
+            api_key = openai_api_key.strip()
+            if not api_key and not os.environ.get("OPENAI_API_KEY"):
+                st.error("🔑 OpenAI API Key가 필요합니다. 사이드바에 API Key를 입력하거나 시스템 환경 변수에 설정해 주세요.")
+            else:
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    try:
+                        pdf_path = os.path.join(tmpdir, "uploaded.pdf")
+                        with open(pdf_path, "wb") as f:
+                            f.write(uploaded_pdf.getbuffer())
                             
-                    st.success("✅ Translation complete.")
-                    
-                    with st.spinner("Generating Word document..."):
-                        docx_output_path = os.path.join(tmpdir, "translated_output.docx")
-                        create_translated_word_doc(translated_pages, output_path=docx_output_path)
-                    
-                    st.success("✅ Word document successfully generated!")
-                    
-                    with open(docx_output_path, "rb") as file:
-                        st.download_button(
-                            label="Download Word (.docx)",
-                            data=file,
-                            file_name="translated_document.docx",
-                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        )
-                except Exception as e:
-                    st.error(f"An error occurred during PDF processing: {e}")
+                        with st.spinner("Extracting text from PDF (ignoring right half and bottom 4.6%)..."):
+                            pages_data = extract_half_texts_from_pdf(pdf_path)
+                        st.success(f"✅ Extracted text from {len(pages_data)} pages.")
+                        
+                        with st.spinner("Translating left-side text to Korean..."):
+                            translated_pages = []
+                            my_bar = st.progress(0, text="Translating pages...")
+                            total_pages = len(pages_data)
+                            
+                            for i, (left_text, right_text) in enumerate(pages_data):
+                                translated_left = translate_text(left_text, api_key=api_key) if left_text else ""
+                                translated_pages.append((translated_left, right_text))
+                                my_bar.progress((i + 1) / total_pages, text=f"Translating pages... ({i+1}/{total_pages})")
+                                
+                        st.success("✅ Translation complete.")
+                        
+                        with st.spinner("Generating Word document..."):
+                            docx_output_path = os.path.join(tmpdir, "translated_output.docx")
+                            create_translated_word_doc(translated_pages, output_path=docx_output_path)
+                        
+                        st.success("✅ Word document successfully generated!")
+                        
+                        with open(docx_output_path, "rb") as file:
+                            st.download_button(
+                                label="Download Word (.docx)",
+                                data=file,
+                                file_name="translated_document.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
+                    except Exception as e:
+                        st.error(f"An error occurred during PDF processing: {e}")
+
