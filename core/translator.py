@@ -33,7 +33,7 @@ def translate_text(text: str, api_key: str = None) -> str:
                         "   - Verbs like 'es' or 'ser' -> '...이다' or '그것은 ...이다'.\n"
                         "   - If a word has multiple important meanings, list them with a slash (e.g., 'algo' -> '무언가 / 어떤 것').\n"
                         "4. For full sentences, translate literally (직독직해) keeping the original structure, rather than freely (의역).\n"
-                        "5. Maintain the exact line breaks and structure of the original input."
+                        "5. Maintain the exact line breaks and structure of the original input. Your output MUST have exactly the same number of lines as the input, mapped line-by-line."
                     )
 
 

@@ -158,7 +158,11 @@ elif service_mode == "📄 PDF 반반 번역기":
                             total_pages = len(pages_data)
                             
                             for i, (left_text, right_text) in enumerate(pages_data):
-                                translated_left = translate_text(left_text, api_key=api_key) if left_text else ""
+                                # 구조적 원인 해결: 왼쪽(영어) 텍스트가 50% 분할선에 의해 글자가 잘리면서(truncation), 
+                                # 'today'가 'toda'로, 'here'가 'her'로 잘려 스페인어/엉뚱한 단어로 인식되는 현상이 발생했습니다.
+                                # 또한 왼쪽과 오른쪽의 줄바꿈 개수가 달라 표가 어긋나는 문제가 있었습니다.
+                                # 이를 해결하기 위해 원본 스페인어(right_text)를 기준으로 번역하여 왼쪽에 배치합니다.
+                                translated_left = translate_text(right_text, api_key=api_key) if right_text else ""
                                 translated_pages.append((translated_left, right_text))
                                 my_bar.progress((i + 1) / total_pages, text=f"Translating pages... ({i+1}/{total_pages})")
                                 
