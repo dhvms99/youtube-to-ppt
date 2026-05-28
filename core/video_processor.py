@@ -1,61 +1,74 @@
 import os
 import cv2
-from scenedetect import VideoManager, SceneManager
-from scenedetect.detectors import ContentDetector
 
-def extract_frames_from_video(video_path: str, output_dir: str = "frames", threshold: float = 30.0) -> list[str]:
+def extract_frames_from_video(video_path: str, output_dir: str = "frames", threshold: float = 2.0) -> list[str]:
     """
-    Detects scene changes in a video and extracts one frame per scene.
-    Returns a list of paths to the extracted frame images.
+    Detects presentation slide changes by finding stable frames that differ from the last saved slide.
+    This works much better than traditional scene cut detectors for lecture videos.
     """
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    video_manager = VideoManager([video_path])
-    scene_manager = SceneManager()
-    
-    # ContentDetector uses a threshold for detecting cuts between scenes
-    scene_manager.add_detector(ContentDetector(threshold=threshold))
-
-    base_timecode = video_manager.get_base_timecode()
-    video_manager.set_downscale_factor()
-    video_manager.start()
-
-    print("Detecting scenes...")
-    scene_manager.detect_scenes(frame_source=video_manager)
-    scene_list = scene_manager.get_scene_list(base_timecode)
-    
-    print(f"Found {len(scene_list)} scenes.")
-
     cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps <= 0 or fps > 120:
+        fps = 30.0
+        
+    # Process ~3 frames per second. Fast enough to catch everything, but skips unnecessary frames.
+    frame_interval = max(1, int(fps / 3))
+    
     frame_paths = []
-    prev_frame = None
-
-    for i, scene in enumerate(scene_list):
-        # scene is a tuple of (start_time, end_time)
-        start_frame = scene[0].get_frames()
-        end_frame = scene[1].get_frames()
-        
-        # Capture the exact middle of the scene to avoid fade/transition blurs
-        target_frame = start_frame + (end_frame - start_frame) // 2
-        
-        cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
+    last_saved_gray = None
+    prev_gray = None
+    
+    # Stability threshold: if the screen changes by less than 0.5 mean pixels between checks, it is "stable"
+    stability_threshold = 0.5 
+    
+    frame_count = 0
+    print("Detecting slide transitions...")
+    
+    while True:
         ret, frame = cap.read()
-        
-        if ret:
-            # Deduplication: convert to grayscale to check for identical slides
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            if prev_frame is not None:
-                # Calculate mean absolute difference
-                diff = cv2.absdiff(gray, prev_frame).mean()
-                # If difference is extremely small, it's essentially the same slide
-                if diff < 1.0:
-                    continue
+        if not ret:
+            break
             
-            prev_frame = gray.copy()
-            frame_path = os.path.join(output_dir, f"scene_{len(frame_paths):04d}.jpg")
-            cv2.imwrite(frame_path, frame)
-            frame_paths.append(frame_path)
+        if frame_count % frame_interval == 0:
+            # Resize image to a smaller resolution for extremely fast diff calculation (e.g., 640x360)
+            # This also filters out minor video compression noise
+            small_frame = cv2.resize(frame, (640, 360))
+            gray = cv2.cvtColor(small_frame, cv2.COLOR_BGR2GRAY)
+            
+            if prev_gray is None:
+                prev_gray = gray
+                frame_count += 1
+                continue
+                
+            # 1. Check if the screen is stable (no fade transitions, animations, or scrolling)
+            frame_diff = cv2.absdiff(gray, prev_gray).mean()
+            is_stable = frame_diff < stability_threshold
+            
+            if is_stable:
+                if last_saved_gray is None:
+                    # Always save the very first stable frame
+                    last_saved_gray = gray.copy()
+                    frame_path = os.path.join(output_dir, f"scene_{len(frame_paths):04d}.jpg")
+                    cv2.imwrite(frame_path, frame) # Save ORIGINAL high-res frame
+                    frame_paths.append(frame_path)
+                else:
+                    # 2. If stable, check if it's a NEW slide compared to the last saved one
+                    slide_diff = cv2.absdiff(gray, last_saved_gray).mean()
+                    
+                    # If difference exceeds the user threshold (e.g., 1.0 or 2.0), save it!
+                    if slide_diff > threshold:
+                        last_saved_gray = gray.copy()
+                        frame_path = os.path.join(output_dir, f"scene_{len(frame_paths):04d}.jpg")
+                        cv2.imwrite(frame_path, frame)
+                        frame_paths.append(frame_path)
+            
+            prev_gray = gray.copy()
+            
+        frame_count += 1
 
     cap.release()
+    print(f"Found {len(frame_paths)} unique slides.")
     return frame_paths
