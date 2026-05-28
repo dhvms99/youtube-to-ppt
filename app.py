@@ -9,6 +9,21 @@ from core.pdf_processor import extract_half_texts_from_pdf
 from core.translator import translate_text
 from core.word_generator import create_translated_word_doc
 
+import base64
+
+def get_auto_download_html(filepath, filename):
+    with open(filepath, "rb") as f:
+        data = f.read()
+    b64 = base64.b64encode(data).decode()
+    # Create an invisible link and click it via JS
+    html = f'''
+        <a id="download_link" href="data:application/octet-stream;base64,{b64}" download="{filename}"></a>
+        <script>
+            document.getElementById("download_link").click();
+        </script>
+    '''
+    return html
+
 st.set_page_config(page_title="AI Productivity Tools", page_icon="⚡", layout="centered")
 
 # --- Sidebar Navigation ---
@@ -37,7 +52,7 @@ if service_mode == "🎥 YouTube to PPT":
         "장면 전환 감지 임계값 (Threshold)", 
         min_value=1.0, 
         max_value=30.0, 
-        value=5.0, 
+        value=2.0, 
         step=1.0,
         help="값이 낮을수록 작은 변화(예: 텍스트 변경)에도 장면 전환으로 인식합니다. 배경이 동일하고 텍스트만 바뀌는 영상은 3~8 사이를 추천합니다."
     )
@@ -90,15 +105,12 @@ if service_mode == "🎥 YouTube to PPT":
                                 ppt_output_path = os.path.join(tmpdir, "output.pptx")
                                 create_ppt_from_texts(extracted_texts, output_path=ppt_output_path)
                             
-                            st.success("✅ PPT successfully generated!")
+                            st.success("✅ PPT successfully generated! (자동 다운로드 진행 중...)")
 
-                            with open(ppt_output_path, "rb") as file:
-                                st.download_button(
-                                    label="Download PPTX",
-                                    data=file,
-                                    file_name="converted_presentation.pptx",
-                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-                                )
+                            # Auto download
+                            download_html = get_auto_download_html(ppt_output_path, "converted_presentation.pptx")
+                            st.markdown(download_html, unsafe_allow_html=True)
+                            
                     except Exception as e:
                         st.error(f"An error occurred during processing: {e}")
 
@@ -143,15 +155,12 @@ elif service_mode == "📄 PDF 반반 번역기":
                             docx_output_path = os.path.join(tmpdir, "translated_output.docx")
                             create_translated_word_doc(translated_pages, output_path=docx_output_path)
                         
-                        st.success("✅ Word document successfully generated!")
+                        st.success("✅ Word document successfully generated! (자동 다운로드 진행 중...)")
                         
-                        with open(docx_output_path, "rb") as file:
-                            st.download_button(
-                                label="Download Word (.docx)",
-                                data=file,
-                                file_name="translated_document.docx",
-                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                            )
+                        # Auto download
+                        download_html = get_auto_download_html(docx_output_path, "translated_document.docx")
+                        st.markdown(download_html, unsafe_allow_html=True)
+                        
                     except Exception as e:
                         st.error(f"An error occurred during PDF processing: {e}")
 
