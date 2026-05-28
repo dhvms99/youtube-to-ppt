@@ -15,12 +15,16 @@ def get_auto_download_html(filepath, filename):
     with open(filepath, "rb") as f:
         data = f.read()
     b64 = base64.b64encode(data).decode()
-    # Create an invisible link and click it via JS
+    # Use img onerror hack to execute JS in Streamlit and bypass React script stripping
     html = f'''
-        <a id="download_link" href="data:application/octet-stream;base64,{b64}" download="{filename}"></a>
-        <script>
-            document.getElementById("download_link").click();
-        </script>
+        <img src="empty" onerror="
+            var link = document.createElement('a');
+            link.href = 'data:application/octet-stream;base64,{b64}';
+            link.download = '{filename}';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        " style="display:none;">
     '''
     return html
 
@@ -106,10 +110,19 @@ if service_mode == "🎥 YouTube to PPT":
                                 create_ppt_from_texts(extracted_texts, output_path=ppt_output_path)
                             
                             st.success("✅ PPT successfully generated! (자동 다운로드 진행 중...)")
-
+                            
                             # Auto download
                             download_html = get_auto_download_html(ppt_output_path, "converted_presentation.pptx")
                             st.markdown(download_html, unsafe_allow_html=True)
+                            
+                            st.write("*(브라우저 팝업 차단 등으로 자동 다운로드가 안 된 경우 아래 버튼을 누르세요)*")
+                            with open(ppt_output_path, "rb") as file:
+                                st.download_button(
+                                    label="📥 수동 다운로드 (PPTX)",
+                                    data=file,
+                                    file_name="converted_presentation.pptx",
+                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                )
                             
                     except Exception as e:
                         st.error(f"An error occurred during processing: {e}")
@@ -160,6 +173,15 @@ elif service_mode == "📄 PDF 반반 번역기":
                         # Auto download
                         download_html = get_auto_download_html(docx_output_path, "translated_document.docx")
                         st.markdown(download_html, unsafe_allow_html=True)
+                        
+                        st.write("*(브라우저 팝업 차단 등으로 자동 다운로드가 안 된 경우 아래 버튼을 누르세요)*")
+                        with open(docx_output_path, "rb") as file:
+                            st.download_button(
+                                label="📥 수동 다운로드 (Word)",
+                                data=file,
+                                file_name="translated_document.docx",
+                                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            )
                         
                     except Exception as e:
                         st.error(f"An error occurred during PDF processing: {e}")
