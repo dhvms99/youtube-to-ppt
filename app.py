@@ -94,16 +94,17 @@ if service_mode == "🎥 YouTube to PPT":
                             total_frames = len(frame_paths)
                             for i, frame_path in enumerate(frame_paths):
                                 text = extract_text_from_image(frame_path)
-                                
-                                if use_ai_ocr and text.strip():
-                                    from core.ocr_engine import correct_ocr_text_with_ai
-                                    text = correct_ocr_text_with_ai(text, api_key)
-                                    
                                 extracted_texts.append(text)
                                 progress = (i + 1) / total_frames
                                 my_bar.progress(progress, text=f"{progress_text} ({i+1}/{total_frames})")
                             
                             st.success("✅ Text extraction complete.")
+                            
+                            if use_ai_ocr:
+                                with st.spinner("AI가 전체 슬라이드 텍스트를 한 번에 문맥 교정 중입니다... (약 3~5초 소요)"):
+                                    from core.ocr_engine import batch_correct_ocr_texts_with_ai
+                                    extracted_texts = batch_correct_ocr_texts_with_ai(extracted_texts, api_key)
+                                st.success("✅ AI OCR correction complete.")
 
                             with st.spinner("Generating PowerPoint presentation..."):
                                 ppt_output_path = os.path.join(tmpdir, "output.pptx")
