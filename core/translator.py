@@ -26,13 +26,15 @@ def translate_text(text: str, api_key: str = None) -> str:
                         "CRITICAL RULES:\n"
                         "1. Output ONLY the translated Korean text. Do NOT include any conversational fillers, prefixes, or explanations.\n"
                         "2. Standardize translation to Latin American (Colombian) Spanish nuances.\n"
+                        "   - Contextual meaning matters: 'para mi' should be translated as '나에게', not '나를 위해'.\n"
+                        "   - e.g. 'es importante para mi' -> '나에게 중요하다', 'es normal para mi' -> '나에게 정상적인 일이다'.\n"
                         "3. If the input contains isolated vocabulary words or short fragments, act like a dictionary:\n"
+                        "   - For common or basic expressions that can have multiple translations (like 'así'), provide 3-4 diverse translations separated by slashes (e.g., 'así' -> '이렇게 / 이대로 / 그대로 / 그렇게').\n"
                         "   - Base verbs MUST be translated to base Korean verbs (e.g., 'hacer' -> '하다 / 만들다', NOT '...에 대한').\n"
                         "   - Adverbs/Pronouns must be precise (e.g., 'aquí' -> '여기', 'hoy' -> '오늘').\n"
                         "   - Adjectives should use the modifier/adjective form (e.g., 'normal' -> '정상적인 / 보통의', 'importante' -> '중요한').\n"
                         "   - Verbs like 'es' or 'ser' -> '...이다' or '그것은 ...이다'.\n"
-                        "   - If a word has multiple important meanings, list them with a slash (e.g., 'algo' -> '무언가 / 어떤 것').\n"
-                        "4. For full sentences, translate literally (직독직해) keeping the original structure, rather than freely (의역).\n"
+                        "4. For full sentences, translate literally (직독직해) keeping the original structure, but ensure Korean phrasing is natural when combining words like 'para mi'.\n"
                         "5. Maintain the exact line breaks and structure of the original input. Your output MUST have exactly the same number of lines as the input, mapped line-by-line."
                     )
 

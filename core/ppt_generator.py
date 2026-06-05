@@ -4,7 +4,7 @@ from pptx.util import Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
 
-def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx"):
+def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx", skip_empty: bool = True):
     """
     Creates a PowerPoint presentation from a list of strings, 
     with one slide per string.
@@ -17,8 +17,8 @@ def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx"):
     slide_count = 0
 
     for text in texts:
-        # Skip empty texts
-        if not text.strip():
+        # Skip empty texts if skip_empty is True
+        if skip_empty and not text.strip():
             continue
             
         slide = prs.slides.add_slide(blank_slide_layout)
@@ -36,7 +36,7 @@ def create_ppt_from_texts(texts: list[str], output_path: str = "output.pptx"):
         tf.vertical_anchor = MSO_ANCHOR.MIDDLE
         
         p = tf.paragraphs[0]
-        p.text = text
+        p.text = text if text.strip() else ""
         
         # Horizontally center the paragraph
         p.alignment = PP_ALIGN.CENTER

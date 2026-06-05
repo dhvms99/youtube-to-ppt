@@ -1,10 +1,10 @@
 import streamlit as st
 import os
 import tempfile
-from core.downloader import download_youtube_video
-from core.video_processor import extract_frames_from_video
-from core.ocr_engine import extract_text_from_image
-from core.ppt_generator import create_ppt_from_texts
+# from core.downloader import download_youtube_video
+# from core.video_processor import extract_frames_from_video
+# from core.ocr_engine import extract_text_from_image
+# from core.ppt_generator import create_ppt_from_texts
 from core.pdf_processor import extract_half_texts_from_pdf
 from core.translator import translate_text
 from core.word_generator import create_translated_word_doc
@@ -32,7 +32,8 @@ st.set_page_config(page_title="AI Productivity Tools", page_icon="⚡", layout="
 
 # --- Sidebar Navigation ---
 st.sidebar.title("Navigation")
-service_mode = st.sidebar.radio("Select a Service:", ("🎥 YouTube to PPT", "📄 PDF 반반 번역기"))
+# service_mode = st.sidebar.radio("Select a Service:", ("🎥 YouTube to PPT", "📄 PDF 반반 번역기"))
+service_mode = st.sidebar.radio("Select a Service:", ("📄 PDF 반반 번역기", "📝 Word to PPT"))
 
 st.sidebar.write("---")
 st.sidebar.subheader("🔑 API 설정 (API Settings)")
@@ -190,4 +191,60 @@ elif service_mode == "📄 PDF 반반 번역기":
                         
                     except Exception as e:
                         st.error(f"An error occurred during PDF processing: {e}")
+
+elif service_mode == "📝 Word to PPT":
+    st.title("📝 Word to PPT")
+    st.write("번역이 완료된 Word(.docx) 파일을 업로드하면, 한 줄(표의 행)마다 왼쪽(한국어), 오른쪽(스페인어) 순서로 PPT 슬라이드를 생성합니다.")
+    
+    uploaded_word = st.file_uploader("Upload your Word file:", type=["docx"])
+    
+    if st.button("Convert to PPT"):
+        if not uploaded_word:
+            st.warning("Please upload a Word file first.")
+        else:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                try:
+                    word_path = os.path.join(tmpdir, "uploaded.docx")
+                    with open(word_path, "wb") as f:
+                        f.write(uploaded_word.getbuffer())
+                    
+                    with st.spinner("Extracting texts from Word table..."):
+                        from docx import Document
+                        doc = Document(word_path)
+                        texts = []
+                        for table in doc.tables:
+                            for row in table.rows:
+                                if len(row.cells) >= 2:
+                                    left_text = row.cells[0].text.strip()
+                                    right_text = row.cells[1].text.strip()
+                                    # 항상 2개씩 쌍으로 넣어야 짝수(검정), 홀수(파랑) 텍스트 컬러 순서가 맞습니다.
+                                    texts.append(left_text)
+                                    texts.append(right_text)
+                        
+                        if not texts:
+                            st.error("표(Table)를 찾을 수 없거나 데이터가 없습니다.")
+                        else:
+                            st.success(f"✅ Extracted {len(texts)//2} rows of text.")
+                            
+                            with st.spinner("Generating PPT..."):
+                                from core.ppt_generator import create_ppt_from_texts
+                                ppt_output_path = os.path.join(tmpdir, "word_output.pptx")
+                                create_ppt_from_texts(texts, output_path=ppt_output_path, skip_empty=False)
+                            
+                            st.success("✅ PPT successfully generated! (자동 다운로드 진행 중...)")
+                            
+                            # Auto download
+                            download_html = get_auto_download_html(ppt_output_path, "word_to_presentation.pptx")
+                            st.markdown(download_html, unsafe_allow_html=True)
+                            
+                            st.write("*(브라우저 팝업 차단 등으로 자동 다운로드가 안 된 경우 아래 버튼을 누르세요)*")
+                            with open(ppt_output_path, "rb") as file:
+                                st.download_button(
+                                    label="📥 수동 다운로드 (PPTX)",
+                                    data=file,
+                                    file_name="word_to_presentation.pptx",
+                                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                )
+                except Exception as e:
+                    st.error(f"An error occurred during Word to PPT processing: {e}")
 

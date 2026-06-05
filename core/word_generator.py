@@ -31,8 +31,8 @@ def create_translated_word_doc(pages_data: list[tuple[str, str]], output_path: s
     
     # Set Narrow Margins (0.5 inches all around) and Center page vertically
     for section in doc.sections:
-        section.top_margin = Inches(0.5)
-        section.bottom_margin = Inches(0.5)
+        section.top_margin = Cm(0.7)
+        section.bottom_margin = Cm(0.7)
         section.left_margin = Inches(0.5)
         section.right_margin = Inches(0.5)
         
@@ -56,7 +56,7 @@ def create_translated_word_doc(pages_data: list[tuple[str, str]], output_path: s
         
         for row_idx, (l_line, r_line) in enumerate(zip_longest(left_lines, right_lines, fillvalue="")):
             row = table.add_row()
-            row.height = Cm(0.5)
+            row.height = Cm(0.52)
             row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
             row_cells = row.cells
             
@@ -68,9 +68,10 @@ def create_translated_word_doc(pages_data: list[tuple[str, str]], output_path: s
             
             if l_line:
                 run_left = p_left.add_run(l_line.strip())
+                run_left.font.name = "Noto Sans KR Regular"
+                run_left._element.rPr.rFonts.set(qn('w:eastAsia'), "Noto Sans KR Regular")
                 run_left.font.color.rgb = RGBColor(0, 0, 0) # Black
-                run_left.font.size = Pt(10)
-            
+                run_left.font.size = Pt(9)            
             # --- Right Column (English, Blue, Left-aligned) ---
             cell_right = row_cells[1]
             _set_cell_border(cell_right)
@@ -84,8 +85,10 @@ def create_translated_word_doc(pages_data: list[tuple[str, str]], output_path: s
             
             if r_line:
                 run_right = p_right.add_run(r_line.strip())
+                run_right.font.name = "Noto Sans KR Regular"
+                run_right._element.rPr.rFonts.set(qn('w:eastAsia'), "Noto Sans KR Regular")
                 run_right.font.color.rgb = RGBColor(0, 112, 192) # Blue
-                run_right.font.size = Pt(10)
+                run_right.font.size = Pt(9)
                 
         # Add a page break after the table, unless it's the very last page
         if page_idx < total_pages - 1:
