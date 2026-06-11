@@ -34,13 +34,18 @@ def translate_text(text: str, api_key: str = None) -> str:
                         "   - Adverbs/Pronouns must be precise (e.g., 'aquí' -> '여기', 'hoy' -> '오늘').\n"
                         "   - Adjectives should use the modifier/adjective form (e.g., 'normal' -> '정상적인 / 보통의', 'importante' -> '중요한').\n"
                         "   - Verbs like 'es' or 'ser' -> '...이다' or '그것은 ...이다'.\n"
-                        "4. For full sentences, translate literally (직독직해) keeping the original structure, but ensure Korean phrasing is natural when combining words like 'para mi'.\n"
-                        "5. Maintain the exact line breaks and structure of the original input. Your output MUST have exactly the same number of lines as the input, mapped line-by-line."
+                        "4. For full sentences, provide a chunk-by-chunk literal translation (청킹/구간 단위 직독직해) separated by slashes (/) to help beginners understand the exact structure.\n"
+                        "   - For example: 'quiero saber si puede llamarme más tarde' MUST be translated as '난 알고싶다 / 만약 그가 내게 전화할 수 있는지 / 나중에'.\n"
+                        "   - Break the sentence into logical phrases (chunks) such as verbs, clauses, and adverbs.\n"
+                        "5. When translating 'porque' clauses, make sure the final phrase naturally ends with '~때문이다'.\n"
+                        "   - For example: 'porque es muy importante' -> '왜냐하면 매우 중요하기 때문이다'.\n"
+                        "6. CRITICAL FORMATTING RULE: The final Korean translation MUST NOT end with a trailing slash (/) or a period (.). The end of the string should be just the final Korean word.\n"
+                        "7. Maintain the exact line breaks and structure of the original input. Your output MUST have exactly the same number of lines as the input, mapped line-by-line."
                     )
-
 
                 },
                 {"role": "user", "content": text}
+
             ],
             temperature=0.3
         )
