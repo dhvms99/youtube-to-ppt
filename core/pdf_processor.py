@@ -1,9 +1,15 @@
 import pdfplumber
 
+# The source PDFs place the English and Spanish columns around the page center,
+# separated by a narrow gutter.  The English text is right-aligned and extends
+# slightly past the physical 50% point, so splitting at exactly ``width / 2``
+# cuts off the final characters of each English line.
+COLUMN_SPLIT_RATIO = 0.52
+
 def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
     """
     Extracts text from a PDF, ignoring the bottom 4.6%.
-    Splits each page into left 50% and right 50%.
+    Splits each page at the inter-column gutter.
     Returns a list of tuples: (left_text, right_text) per page.
     """
     extracted_pages = []
@@ -19,10 +25,13 @@ def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
             # pdfplumber bbox: (x0, top, x1, bottom)
             bottom_cut = height * (1.0 - 0.046)
             
-            # Left bounding box: (0, 0, width/2, bottom_cut)
-            left_bbox = (0, 0, width / 2, bottom_cut)
-            # Right bounding box: (width/2, 0, width, bottom_cut)
-            right_bbox = (width / 2, 0, width, bottom_cut)
+            # These bilingual worksheets have a gutter just to the right of
+            # the physical page center.  Use that gutter (52% of page width)
+            # rather than the exact midpoint so English line endings remain
+            # in the left column and Spanish begins cleanly in the right.
+            split_x = width * COLUMN_SPLIT_RATIO
+            left_bbox = (0, 0, split_x, bottom_cut)
+            right_bbox = (split_x, 0, width, bottom_cut)
             
             # Crop pages
             left_crop = page.within_bbox(left_bbox)
