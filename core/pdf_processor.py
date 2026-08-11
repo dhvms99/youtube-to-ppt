@@ -1,9 +1,55 @@
 import pdfplumber
 
+def get_dynamic_split_x(page, width, bottom_cut):
+    """
+    Dynamically finds the vertical split line by searching for a vertical gap
+    where no text bounding boxes cross.
+    Searches between 35% and 65% of the page width.
+    """
+    search_start = width * 0.35
+    search_end = width * 0.65
+    
+    # Extract words. We only consider words that are above the bottom_cut
+    words = page.extract_words()
+    valid_words = [w for w in words if w['bottom'] <= bottom_cut]
+    
+    valid_gaps = []
+    # Check X coordinates in the center region
+    for x in range(int(search_start), int(search_end)):
+        crosses = False
+        for w in valid_words:
+            # If word's left bound is before X and right bound is after X
+            if w['x0'] < x < w['x1']:
+                crosses = True
+                break
+        if not crosses:
+            valid_gaps.append(x)
+            
+    if valid_gaps:
+        # Group continuous gaps into segments to find the true column divider
+        segments = []
+        current_segment = [valid_gaps[0]]
+        for x in valid_gaps[1:]:
+            if x == current_segment[-1] + 1:
+                current_segment.append(x)
+            else:
+                segments.append(current_segment)
+                current_segment = [x]
+        segments.append(current_segment)
+        
+        # Find the segment closest to the center of the page
+        center = width / 2.0
+        best_segment = min(segments, key=lambda seg: abs(sum(seg)/len(seg) - center))
+        
+        return sum(best_segment) / len(best_segment)
+        
+    return None  # No clear gap found (e.g. title page or full-width intro text)
+
 def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
     """
     Extracts text from a PDF, ignoring the bottom 4.6%.
-    Splits each page into left 50% and right 50%.
+    Dynamically splits each page into left and right halves based on text gaps.
+    Skips pages that do not have a clear two-column structure.
     Returns a list of tuples: (left_text, right_text) per page.
     """
     extracted_pages = []
@@ -19,10 +65,18 @@ def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
             # pdfplumber bbox: (x0, top, x1, bottom)
             bottom_cut = height * (1.0 - 0.046)
             
-            # Left bounding box: (0, 0, width/2, bottom_cut)
-            left_bbox = (0, 0, width / 2, bottom_cut)
-            # Right bounding box: (width/2, 0, width, bottom_cut)
-            right_bbox = (width / 2, 0, width, bottom_cut)
+            # Dynamically detect split line
+            split_x = get_dynamic_split_x(page, width, bottom_cut)
+            
+            if split_x is None:
+                # Skip pages that don't have a clear two-column gap
+                continue
+            
+            # Left bounding box: (0, 0, split_x, bottom_cut)
+            left_bbox = (0, 0, split_x, bottom_cut)
+
+            # Right bounding box: (split_x, 0, width, bottom_cut)
+            right_bbox = (split_x, 0, width, bottom_cut)
             
             # Crop pages
             left_crop = page.within_bbox(left_bbox)
