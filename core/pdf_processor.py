@@ -5,6 +5,13 @@ def get_dynamic_split_x(page, width, bottom_cut):
     Dynamically finds the vertical split line by searching for a vertical gap
     where no text bounding boxes cross.
     Searches between 35% and 65% of the page width.
+
+    The source PDFs place the English and Spanish columns around the page
+    center, separated by a narrow gutter. The English text is right-aligned
+    and extends slightly past the physical 50% point, so splitting at exactly
+    ``width / 2`` cuts off the final characters of each English line. The
+    gutter is not at a fixed offset either, so it is located per page instead
+    of being hardcoded to a ratio.
     """
     search_start = width * 0.35
     search_end = width * 0.65
@@ -48,8 +55,8 @@ def get_dynamic_split_x(page, width, bottom_cut):
 def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
     """
     Extracts text from a PDF, ignoring the bottom 4.6%.
-    Dynamically splits each page into left and right halves based on text gaps.
-    Skips pages that do not have a clear two-column structure.
+    Splits each page at the inter-column gutter, located dynamically from the
+    text gaps. Skips pages that do not have a clear two-column structure.
     Returns a list of tuples: (left_text, right_text) per page.
     """
     extracted_pages = []
@@ -65,13 +72,14 @@ def extract_half_texts_from_pdf(pdf_path: str) -> list[tuple[str, str]]:
             # pdfplumber bbox: (x0, top, x1, bottom)
             bottom_cut = height * (1.0 - 0.046)
             
-            # Dynamically detect split line
+            # Locate the gutter for this page so English line endings stay in
+            # the left column and Spanish begins cleanly in the right.
             split_x = get_dynamic_split_x(page, width, bottom_cut)
-            
+
             if split_x is None:
                 # Skip pages that don't have a clear two-column gap
                 continue
-            
+
             # Left bounding box: (0, 0, split_x, bottom_cut)
             left_bbox = (0, 0, split_x, bottom_cut)
 
